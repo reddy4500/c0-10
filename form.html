@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select System & Subsystem | CO-DOCTOR</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ... your existing styles ... */
+        #uploadStatus {
+            margin-top: 10px;
+            font-size: 0.98em;
+            color: #0188df;
+            min-height: 20px;
+        }
+    </style>
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <!-- Firebase Storage -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <img src="logo.jpeg" class="logo" alt="CO-DOCTOR Logo">
+            <span class="brand-name">CO-DOCTOR</span>
+        </div>
+        <ul class="navbar-center">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="#">About</a></li>
+        </ul>
+        <div class="navbar-right">
+            <a href="#" onclick="logout()" class="login-btn">Logout</a>
+        </div>
+    </nav>
+
+    <section class="main-section">
+        <div class="form-container">
+            <h2>Choose Your System</h2>
+            <div class="greeting" id="greeting"></div>
+            <div id="form-section">
+                <select id="system-select">
+                    <option value="">Select System</option>
+                </select>
+                <select id="subsystem-select" style="display:none;">
+                    <option value="">Select Subsystem</option>
+                </select>
+                <button onclick="submitAssignment()" class="btn" id="submit-btn" style="display:none;">Submit</button>
+            </div>
+            <div id="assignment-info"></div>
+            <div id="success-message"></div>
+
+            <!-- File Upload Section -->
+            <hr style="margin: 30px 0 20px 0; width:100%;">
+            <h3 style="margin-bottom:10px;">Upload Document</h3>
+            <input type="file" id="fileInput" />
+            <button id="uploadBtn" class="btn" style="margin-top:10px;">Upload File</button>
+            <div id="uploadStatus"></div>
+        </div>
+    </section>
+    <script>
+        // Redirect to login if not signed in
+        if (!localStorage.getItem('loggedIn') || !localStorage.getItem('username')) {
+            window.location.href = 'login.html';
+        }
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDlKfGXZUjHb7NaAt3T945xUSa-9r8y0Vk",
+            authDomain: "co-doctor-e0de4.firebaseapp.com",
+            databaseURL: "https://co-doctor-e0de4-default-rtdb.firebaseio.com",
+            projectId: "co-doctor-e0de4",
+            storageBucket: "co-doctor-e0de4.appspot.com",
+            messagingSenderId: "278726853369",
+            appId: "1:278726853369:web:939390176e5585bc04d828",
+            measurementId: "G-47XZBZ80VL"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+
+        // File Upload Logic
+        document.getElementById('uploadBtn').onclick = function() {
+            const fileInput = document.getElementById('fileInput');
+            const status = document.getElementById('uploadStatus');
+            if (!fileInput.files.length) {
+                status.innerText = "Please select a file.";
+                return;
+            }
+            const file = fileInput.files[0];
+            const username = localStorage.getItem('username') || 'anonymous';
+            const storageRef = storage.ref('uploads/' + username + '/' + file.name);
+            const uploadTask = storageRef.put(file);
+
+            uploadTask.on('state_changed',
+                function(snapshot) {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    status.innerText = `Upload is ${progress.toFixed(1)}% done`;
+                },
+                function(error) {
+                    status.style.color = "#e74c3c";
+                    status.innerText = "Upload failed: " + error.message;
+                },
+                function() {
+                    uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
+                        status.style.color = "#27ae60";
+                        status.innerHTML = `Upload complete! <a href="${downloadURL}" target="_blank">View File</a>`;
+                    });
+                }
+            );
+        };
+
+        // Assignment logic (your existing code, unchanged)
+        // ...[all your assignment JS code from your paste.txt]...
+
+        // Define systems and subsystems
+        const systems = [
+            {id: 1, name: "Respiratory Medicine (Pulmo)", subsystems: ["RICU", "TB and exam ward", "OP", "Casualty"]},
+            {id: 2, name: "Pediatrics", subsystems: ["Wards", "PICU", "OP"]},
+            {id: 3, name: "General Surgery", subsystems: ["OP", "Wards"]},
+            {id: 4, name: "Radiology", subsystems: ["Morning", "Afternoon", "Night"]},
+            {id: 5, name: "ENT", subsystems: ["Casualty", "Ward"]},
+            {id: 6, name: "Orthopedics", subsystems: ["OP", "Ward/Casualty", "OT", "Casualty"]},
+            {id: 7, name: "SPM (Community Medicine)", subsystems: ["Gudihattham", "Khurikidivagas", "Psychiatry", "CS", "DTC", "SUC", "Department"]},
+            {id: 8, name: "Casualty", subsystems: [
+                "CMO (8am-2pm, 2pm-8pm, 8pm-12am, 8pm-8am)",
+                "COTM (medical/surgical)",
+                "DSO (surgery)",
+                "Pulmo (casualty/other)",
+                "ENT",
+                "Ophthal",
+                "Psy"
+            ]},
+            {id: 9, name: "Medicine", subsystems: ["MICU", "COTM", "BCCO", "MMW", "FMW", "OP"]},
+            {id: 10, name: "OBG & Labour Room", subsystems: [
+                "Labour Room (Morning/Night)",
+                "Admissions",
+                "HDU",
+                "Labour Room Intern",
+                "POW 1",
+                "POW 2",
+                "PHW",
+                "OP"
+            ]},
+            {id: 11, name: "Anaesthesia", subsystems: [
+                "SS H",
+                "Old Building",
+                "Full Duty"
+            ]}
+        ];
+
+        function greetUser() {
+            const username = localStorage.getItem('username');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const user = users[username];
+            if (user) {
+                document.getElementById('greeting').innerHTML =
+                    `Welcome, <b>${user.fullname}</b><br>Phone: <b>${user.phone}</b>`;
+            } else {
+                document.getElementById('greeting').innerHTML = "";
+            }
+        }
+
+        function populateSystems() {
+            const systemSelect = document.getElementById('system-select');
+            systems.forEach(system => {
+                const opt = document.createElement('option');
+                opt.value = system.id;
+                opt.textContent = system.name;
+                systemSelect.appendChild(opt);
+            });
+        }
+
+        document.getElementById('system-select').addEventListener('change', function() {
+            const systemId = this.value;
+            const subsystemSelect = document.getElementById('subsystem-select');
+            subsystemSelect.innerHTML = '<option value="">Select Subsystem</option>';
+            if (systemId) {
+                const system = systems.find(s => s.id == systemId);
+                system.subsystems.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.textContent = sub;
+                    subsystemSelect.appendChild(opt);
+                });
+                subsystemSelect.style.display = '';
+                document.getElementById('submit-btn').style.display = '';
+            } else {
+                subsystemSelect.style.display = 'none';
+                document.getElementById('submit-btn').style.display = 'none';
+            }
+        });
+
+        function showAssignmentInfo() {
+            const username = localStorage.getItem('username');
+            let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
+            let assigned = false;
+            let assignedSystem = '', assignedSubsystem = '', assignedSystemId = '';
+            for (const sysId in assignments) {
+                for (const sub in assignments[sysId]) {
+                    if (assignments[sysId][sub].some(u => u.username === username)) {
+                        assigned = true;
+                        assignedSystemId = sysId;
+                        assignedSystem = systems.find(s => s.id == sysId).name;
+                        assignedSubsystem = sub;
+                        break;
+                    }
+                }
+                if (assigned) break;
+            }
+            const assignmentDiv = document.getElementById('assignment-info');
+            if (assigned) {
+                document.getElementById('form-section').style.display = 'none';
+                assignmentDiv.innerHTML = `
+                    <b>You are assigned to:</b><br>
+                    System: <b>${assignedSystem}</b><br>
+                    Subsystem: <b>${assignedSubsystem}</b><br>
+                    <button id="leave-btn">Leave</button>
+                `;
+                document.getElementById('leave-btn').onclick = function() {
+                    leaveAssignment(assignedSystemId, assignedSubsystem, username);
+                };
+            } else {
+                document.getElementById('form-section').style.display = '';
+                assignmentDiv.innerHTML = '';
+            }
+        }
+
+        function submitAssignment() {
+            const systemId = document.getElementById('system-select').value;
+            const subsystem = document.getElementById('subsystem-select').value;
+            const msg = document.getElementById('success-message');
+            msg.textContent = "";
+
+            if (!systemId || !subsystem) {
+                msg.style.color = "#c0392b";
+                msg.textContent = "Please select both system and subsystem.";
+                return;
+            }
+
+            const username = localStorage.getItem('username');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const user = users[username];
+
+            let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
+            for (const sysId in assignments) {
+                for (const sub in assignments[sysId]) {
+                    assignments[sysId][sub] = assignments[sysId][sub].filter(u => u.username !== username);
+                }
+            }
+            if (!assignments[systemId]) assignments[systemId] = {};
+            if (!assignments[systemId][subsystem]) assignments[systemId][subsystem] = [];
+
+            assignments[systemId][subsystem].push({
+                fullname: user.fullname,
+                phone: user.phone,
+                username: username
+            });
+            localStorage.setItem('assignments', JSON.stringify(assignments));
+            msg.style.color = "#27ae60";
+            msg.textContent = "Assignment successful!";
+            setTimeout(() => {
+                msg.textContent = "";
+                showAssignmentInfo();
+            }, 800);
+        }
+
+        function leaveAssignment(systemId, subsystem, username) {
+            let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
+            if (assignments[systemId] && assignments[systemId][subsystem]) {
+                assignments[systemId][subsystem] = assignments[systemId][subsystem].filter(u => u.username !== username);
+                localStorage.setItem('assignments', JSON.stringify(assignments));
+            }
+            document.getElementById('success-message').style.color = "#c0392b";
+            document.getElementById('success-message').textContent = "You have left the subsystem.";
+            setTimeout(() => {
+                document.getElementById('success-message').textContent = "";
+                showAssignmentInfo();
+            }, 1000);
+        }
+
+        function logout() {
+            localStorage.removeItem('loggedIn');
+            localStorage.removeItem('username');
+            window.location.href = 'login.html';
+        }
+
+        // On page load
+        greetUser();
+        populateSystems();
+        showAssignmentInfo();
+    </script>
+</body>
+</html>
