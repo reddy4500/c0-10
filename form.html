@@ -6,18 +6,85 @@
     <title>Select System & Subsystem | CO-DOCTOR</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* ... your existing styles ... */
-        #uploadStatus {
-            margin-top: 10px;
-            font-size: 0.98em;
+        body {
+            min-height: 100vh;
+            background: #f5f8fa;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .form-container {
+            background: #fff;
+            padding: 40px 32px 32px 32px;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+            min-width: 320px;
+            margin: 60px auto 0 auto;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 {
+            color: #003366;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        .greeting {
             color: #0188df;
-            min-height: 20px;
+            margin-bottom: 22px;
+            font-size: 1.07em;
+            text-align: center;
+        }
+        select, .btn {
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            border: 1px solid #b0c4de;
+            border-radius: 7px;
+            font-size: 1em;
+            outline: none;
+            transition: border 0.2s;
+        }
+        select:focus {
+            border: 1.5px solid #0188df;
+        }
+        .btn {
+            background: #0188df;
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 0;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        #leave-btn {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            padding: 10px 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+        #leave-btn:hover {
+            background: #c0392b;
+        }
+        #assignment-info {
+            margin-top: 24px;
+            text-align: center;
+        }
+        #success-message {
+            color: #27ae60;
+            margin-top: 10px;
+            font-size: 1em;
+            min-height: 22px;
         }
     </style>
-    <!-- Firebase App (the core Firebase SDK) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <!-- Firebase Storage -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
 <body>
     <!-- Navbar -->
@@ -50,13 +117,6 @@
             </div>
             <div id="assignment-info"></div>
             <div id="success-message"></div>
-
-            <!-- File Upload Section -->
-            <hr style="margin: 30px 0 20px 0; width:100%;">
-            <h3 style="margin-bottom:10px;">Upload Document</h3>
-            <input type="file" id="fileInput" />
-            <button id="uploadBtn" class="btn" style="margin-top:10px;">Upload File</button>
-            <div id="uploadStatus"></div>
         </div>
     </section>
     <script>
@@ -64,55 +124,6 @@
         if (!localStorage.getItem('loggedIn') || !localStorage.getItem('username')) {
             window.location.href = 'login.html';
         }
-
-        // Firebase config
-        const firebaseConfig = {
-            apiKey: "AIzaSyDlKfGXZUjHb7NaAt3T945xUSa-9r8y0Vk",
-            authDomain: "co-doctor-e0de4.firebaseapp.com",
-            databaseURL: "https://co-doctor-e0de4-default-rtdb.firebaseio.com",
-            projectId: "co-doctor-e0de4",
-            storageBucket: "co-doctor-e0de4.appspot.com",
-            messagingSenderId: "278726853369",
-            appId: "1:278726853369:web:939390176e5585bc04d828",
-            measurementId: "G-47XZBZ80VL"
-        };
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const storage = firebase.storage();
-
-        // File Upload Logic
-        document.getElementById('uploadBtn').onclick = function() {
-            const fileInput = document.getElementById('fileInput');
-            const status = document.getElementById('uploadStatus');
-            if (!fileInput.files.length) {
-                status.innerText = "Please select a file.";
-                return;
-            }
-            const file = fileInput.files[0];
-            const username = localStorage.getItem('username') || 'anonymous';
-            const storageRef = storage.ref('uploads/' + username + '/' + file.name);
-            const uploadTask = storageRef.put(file);
-
-            uploadTask.on('state_changed',
-                function(snapshot) {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    status.innerText = `Upload is ${progress.toFixed(1)}% done`;
-                },
-                function(error) {
-                    status.style.color = "#e74c3c";
-                    status.innerText = "Upload failed: " + error.message;
-                },
-                function() {
-                    uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
-                        status.style.color = "#27ae60";
-                        status.innerHTML = `Upload complete! <a href="${downloadURL}" target="_blank">View File</a>`;
-                    });
-                }
-            );
-        };
-
-        // Assignment logic (your existing code, unchanged)
-        // ...[all your assignment JS code from your paste.txt]...
 
         // Define systems and subsystems
         const systems = [
@@ -150,6 +161,7 @@
             ]}
         ];
 
+        // Greet user
         function greetUser() {
             const username = localStorage.getItem('username');
             const users = JSON.parse(localStorage.getItem('users') || '{}');
@@ -162,6 +174,7 @@
             }
         }
 
+        // Populate system select
         function populateSystems() {
             const systemSelect = document.getElementById('system-select');
             systems.forEach(system => {
@@ -172,6 +185,7 @@
             });
         }
 
+        // Populate subsystems on system select
         document.getElementById('system-select').addEventListener('change', function() {
             const systemId = this.value;
             const subsystemSelect = document.getElementById('subsystem-select');
@@ -192,6 +206,7 @@
             }
         });
 
+        // Show assignment info and leave button if already assigned
         function showAssignmentInfo() {
             const username = localStorage.getItem('username');
             let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
@@ -227,6 +242,7 @@
             }
         }
 
+        // Handle submit
         function submitAssignment() {
             const systemId = document.getElementById('system-select').value;
             const subsystem = document.getElementById('subsystem-select').value;
@@ -239,11 +255,14 @@
                 return;
             }
 
+            // Get user info
             const username = localStorage.getItem('username');
             const users = JSON.parse(localStorage.getItem('users') || '{}');
             const user = users[username];
 
+            // Get existing assignments
             let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
+            // Remove user from any previous assignment
             for (const sysId in assignments) {
                 for (const sub in assignments[sysId]) {
                     assignments[sysId][sub] = assignments[sysId][sub].filter(u => u.username !== username);
@@ -252,6 +271,7 @@
             if (!assignments[systemId]) assignments[systemId] = {};
             if (!assignments[systemId][subsystem]) assignments[systemId][subsystem] = [];
 
+            // Assign user
             assignments[systemId][subsystem].push({
                 fullname: user.fullname,
                 phone: user.phone,
@@ -266,6 +286,7 @@
             }, 800);
         }
 
+        // Leave assignment
         function leaveAssignment(systemId, subsystem, username) {
             let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
             if (assignments[systemId] && assignments[systemId][subsystem]) {
@@ -280,6 +301,7 @@
             }, 1000);
         }
 
+        // Logout function
         function logout() {
             localStorage.removeItem('loggedIn');
             localStorage.removeItem('username');
