@@ -1,5 +1,10 @@
+
+import { db, auth } from "./firebase.js";
+import { collection, doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
 // ----------- User Registration -----------
-function register() {
+async function register() {
     const fullname = document.getElementById('reg-fullname').value.trim();
     const phone = document.getElementById('reg-phone').value.trim();
     const username = document.getElementById('reg-username').value.trim();
@@ -11,42 +16,36 @@ function register() {
         errorElem.innerText = "Please fill in all fields.";
         return;
     }
-    if (!/^\d{10}$/.test(phone)) {
+
+    try {
+        await createUserWithEmailAndPassword(auth, username + "@codoctor.com", password);
+        await setDoc(doc(db, "users", username), {
+            fullname: fullname,
+            phone: phone
+        });
+        errorElem.style.color = "green";
+        errorElem.innerText = "Registration successful! Redirecting to login...";
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1200);
+    } catch (error) {
         errorElem.style.color = "red";
-        errorElem.innerText = "Please enter a valid 10-digit phone number.";
-        return;
+        errorElem.innerText = error.message;
     }
-    let users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (users[username]) {
-        errorElem.style.color = "red";
-        errorElem.innerText = "Username already exists. Please choose another.";
-        return;
-    }
-    users[username] = {
-        password: password,
-        fullname: fullname,
-        phone: phone
-    };
-    localStorage.setItem('users', JSON.stringify(users));
-    errorElem.style.color = "green";
-    errorElem.innerText = "Registration successful! Redirecting to login...";
-    setTimeout(() => {
-        window.location.href = 'login.html';
-    }, 1200);
 }
 
 // ----------- User Login -----------
-function login() {
+async function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     const errorElem = document.getElementById('login-error');
 
-    let users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (users[username] && users[username].password === password) {
+    try {
+        await signInWithEmailAndPassword(auth, username + "@codoctor.com", password);
         localStorage.setItem('loggedIn', 'true');
         localStorage.setItem('username', username);
         window.location.href = 'form.html';
-    } else {
+    } catch (error) {
         errorElem.style.color = "red";
         errorElem.innerText = "Invalid credentials!";
     }
@@ -54,18 +53,21 @@ function login() {
 
 // ----------- Logout -----------
 function logout() {
-    localStorage.removeItem('loggedIn');
-    localStorage.removeItem('username');
-    window.location.href = 'login.html';
+    signOut(auth).then(() => {
+        localStorage.removeItem('loggedIn');
+        localStorage.removeItem('username');
+        window.location.href = 'login.html';
+    }).catch((error) => {
+        console.error(error);
+    });
 }
 
 // ----------- Assignment Functions -----------
-
-// Assign user to system/subsystem
-function submitAssignment() {
+async function submitAssignment() {
     const systemId = document.getElementById('system-select').value;
     const subsystem = document.getElementById('subsystem-select').value;
     const msg = document.getElementById('success-message');
+
     msg.textContent = "";
 
     if (!systemId || !subsystem) {
@@ -75,48 +77,46 @@ function submitAssignment() {
     }
 
     const username = localStorage.getItem('username');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const user = users[username];
-
-    let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
-
-    // Remove user from previous assignments
-    for (const sysId in assignments) {
-        for (const sub in assignments[sysId]) {
-            assignments[sysId][sub] = assignments[sysId][sub].filter(u => u.username !== username);
-        }
-    }
-
-    if (!assignments[systemId]) assignments[systemId] = {};
-    if (!assignments[systemId][subsystem]) assignments[systemId][subsystem] = [];
-
-    // Prevent duplicate assignment
-    if (!assignments[systemId][subsystem].some(u => u.username === username)) {
-        assignments[systemId][subsystem].push({
-            fullname: user.fullname,
-            phone: user.phone,
-            username: username
-        });
-        localStorage.setItem('assignments', JSON.stringify(assignments));
-        msg.style.color = "#27ae60";
-        msg.innerText = "Assignment successful!";
-        setTimeout(() => {
-            msg.innerText = "";
-            showAssignmentInfo();
-        }, 700);
-    } else {
+    const userDoc = await getDoc(doc(db, "users", username));
+    if (!userDoc.exists()) {
         msg.style.color = "#c0392b";
-        msg.innerText = "You are already assigned to this subsystem.";
+        msg.innerText = "User not found!";
+        return;
     }
+
+    const userData = userDoc.data();
+    const assignmentKey = `${systemId}_${subsystem}`;
+
+    await setDoc(doc(db, "assignments", assignmentKey), {
+        assignedUsers: arrayUnion({
+            fullname: userData.fullname,
+            phone: userData.phone,
+            username: username
+        })
+    }, { merge: true });
+
+    msg.style.color = "#27ae60";
+    msg.innerText = "Assignment successful!";
+    setTimeout(() => {
+        msg.innerText = "";
+        showAssignmentInfo();
+    }, 700);
 }
 
-// Remove user from their assignment
-function leaveAssignment(systemId, subsystem, username) {
-    let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
-    if (assignments[systemId] && assignments[systemId][subsystem]) {
-        assignments[systemId][subsystem] = assignments[systemId][subsystem].filter(u => u.username !== username);
-        localStorage.setItem('assignments', JSON.stringify(assignments));
-    }
+async function leaveAssignment(systemId, subsystem, username) {
+    const assignmentKey = `${systemId}_${subsystem}`;
+    const userDoc = await getDoc(doc(db, "users", username));
+    if (!userDoc.exists()) return;
+    const userData = userDoc.data();
+
+    await updateDoc(doc(db, "assignments", assignmentKey), {
+        assignedUsers: arrayRemove({
+            fullname: userData.fullname,
+            phone: userData.phone,
+            username: username
+        })
+    });
+
     const msg = document.getElementById('success-message');
     msg.style.color = "#c0392b";
     msg.innerText = "You have left the subsystem.";
@@ -126,26 +126,31 @@ function leaveAssignment(systemId, subsystem, username) {
     }, 1000);
 }
 
-// Display the user's current assignment and show "Leave" button
-function showAssignmentInfo() {
+async function showAssignmentInfo() {
     const username = localStorage.getItem('username');
-    let assignments = JSON.parse(localStorage.getItem('assignments') || '{}');
+    const assignmentDiv = document.getElementById('assignment-info');
     let assigned = false;
     let assignedSystem = '', assignedSubsystem = '', assignedSystemId = '';
-    // You should have a `systems` array defined globally on the form.html page
-    for (const sysId in assignments) {
-        for (const sub in assignments[sysId]) {
-            if (assignments[sysId][sub].some(u => u.username === username)) {
-                assigned = true;
-                assignedSystemId = sysId;
-                assignedSystem = typeof systems !== "undefined" && systems.find(s => s.id == sysId) ? systems.find(s => s.id == sysId).name : sysId;
-                assignedSubsystem = sub;
-                break;
+
+    const systemsArray = typeof systems !== "undefined" ? systems : [];
+    for (const system of systemsArray) {
+        for (const sub of system.subsystems) {
+            const assignmentKey = `${system.id}_${sub}`;
+            const assignmentDoc = await getDoc(doc(db, "assignments", assignmentKey));
+            if (assignmentDoc.exists()) {
+                const users = assignmentDoc.data().assignedUsers || [];
+                if (users.some(u => u.username === username)) {
+                    assigned = true;
+                    assignedSystemId = system.id;
+                    assignedSystem = system.name;
+                    assignedSubsystem = sub;
+                    break;
+                }
             }
         }
         if (assigned) break;
     }
-    const assignmentDiv = document.getElementById('assignment-info');
+
     if (assigned) {
         if (document.getElementById('form-section')) document.getElementById('form-section').style.display = 'none';
         assignmentDiv.innerHTML = `
@@ -164,43 +169,38 @@ function showAssignmentInfo() {
 }
 
 // ----------- Home Page Credential Display -----------
-function loadHome() {
+async function loadHome() {
     const loggedIn = localStorage.getItem('loggedIn');
     const username = localStorage.getItem('username');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const user = users[username];
-    if (!loggedIn || !user) {
+    if (!loggedIn || !username) {
         window.location.href = 'login.html';
-    } else {
-        const fullname = user.fullname || username;
-        const phone = user.phone || 'N/A';
-        if (document.getElementById('doctor-credentials')) {
-            document.getElementById('doctor-credentials').innerText =
-                `Logged in as: Dr. ${fullname} | Phone: ${phone}`;
-        }
+        return;
+    }
+
+    const userDoc = await getDoc(doc(db, "users", username));
+    if (!userDoc.exists()) {
+        window.location.href = 'login.html';
+        return;
+    }
+    const user = userDoc.data();
+    if (document.getElementById('doctor-credentials')) {
+        document.getElementById('doctor-credentials').innerText =
+            `Logged in as: Dr. ${user.fullname} | Phone: ${user.phone}`;
     }
 }
 
 // ----------- Greeting on Form Page -----------
-function greetUser() {
+async function greetUser() {
     const username = localStorage.getItem('username');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const user = users[username];
-    if (user && document.getElementById('greeting')) {
+    const userDoc = await getDoc(doc(db, "users", username));
+    if (userDoc.exists() && document.getElementById('greeting')) {
+        const user = userDoc.data();
         document.getElementById('greeting').innerHTML =
             `Welcome, <b>${user.fullname}</b><br>Phone: <b>${user.phone}</b>`;
     }
 }
 
 // ----------- Page Initialization -----------
-// Call this on form.html page load
-function initFormPage() {
-    greetUser();
-    if (typeof populateSystems === "function") populateSystems();
-    showAssignmentInfo();
-}
-
-// Call loadHome() on index.html
 if (document.getElementById('doctor-credentials')) {
     loadHome();
 }
