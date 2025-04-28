@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Doctors Availability | CO-DOCTOR</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f8fa;
+            margin: 0;
+        }
+        .navbar {
+            background: #003366;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            height: 60px;
+            justify-content: space-between;
+        }
+        .navbar-left {
+            display: flex;
+            align-items: center;
+        }
+        .logo {
+            height: 38px;
+            margin-right: 12px;
+        }
+        .brand-name {
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        .navbar-center {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 20px;
+        }
+        .navbar-center li a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        .navbar-center li a.active, .navbar-center li a:hover {
+            background: #0056b3;
+        }
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .navbar-right .login-btn, .navbar-right .logout-btn {
+            color: #fff;
+            text-decoration: none;
+            background: #0056b3;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .navbar-right .login-btn:hover, .navbar-right .logout-btn:hover {
+            background: #0074d9;
+        }
+        #doctor-credentials {
+            font-size: 1em;
+            color: #bde0ff;
+            margin-right: 10px;
+        }
+        .main-section {
+            max-width: 1100px;
+            margin: 40px auto 0 auto;
+            padding: 0 16px;
+        }
+        .main-section h1 {
+            color: #003366;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .system-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 40px;
+        }
+        .system-box {
+            background: #0188df;
+            color: #fff;
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            width: 320px;
+            min-height: 70px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            padding: 24px 28px 18px 28px;
+            font-size: 1.18em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .system-box:hover {
+            background: #0056b3;
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
+        @media (max-width: 700px) {
+            .system-box {
+                width: 95vw;
+                min-width: unset;
+                font-size: 1em;
+                padding: 18px 8px 14px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <img src="logo.jpeg" class="logo" alt="CO-DOCTOR Logo">
+            <span class="brand-name">CO-DOCTOR</span>
+        </div>
+        <ul class="navbar-center">
+            <li><a href="index.html" class="active">Home</a></li>
+            <li><a href="#">About</a></li>
+        </ul>
+        <div class="navbar-right">
+            <span id="doctor-credentials"></span>
+            <a href="login.html" class="login-btn" id="login-btn" style="display:none;">Login</a>
+            <button class="logout-btn" id="logout-btn" style="display:none;" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Main Section -->
+    <section class="main-section">
+        <h1>Hospital Systems</h1>
+        <div class="system-grid" id="system-grid"></div>
+    </section>
+
+    <script>
+        // --- SYSTEMS DATA ---
+        const systems = [
+            {id: 1, name: "Respiratory Medicine (Pulmo)", subsystems: ["RICU", "TB and exam ward", "OP", "Casualty"]},
+            {id: 2, name: "Pediatrics", subsystems: ["Wards", "PICU", "OP"]},
+            {id: 3, name: "General Surgery", subsystems: ["OP", "Wards"]},
+            {id: 4, name: "Radiology", subsystems: ["Morning", "Afternoon", "Night"]},
+            {id: 5, name: "ENT", subsystems: ["Casualty", "Ward"]},
+            {id: 6, name: "Orthopedics", subsystems: ["OP", "Ward/Casualty", "OT", "Casualty"]},
+            {id: 7, name: "SPM (Community Medicine)", subsystems: ["Gudihattham", "Khurikidivagas", "Psychiatry", "CS", "DTC", "SUC", "Department"]},
+            {id: 8, name: "Casualty", subsystems: [
+                "CMO (8am-2pm, 2pm-8pm, 8pm-12am, 8pm-8am)",
+                "COTM (medical/surgical)",
+                "DSO (surgery)",
+                "Pulmo (casualty/other)",
+                "ENT",
+                "Ophthal",
+                "Psy"
+            ]},
+            {id: 9, name: "Medicine", subsystems: ["MICU", "COTM", "BCCO", "MMW", "FMW", "OP"]},
+            {id: 10, name: "OBG & Labour Room", subsystems: [
+                "Labour Room (Morning/Night)",
+                "Admissions",
+                "HDU",
+                "Labour Room Intern",
+                "POW 1",
+                "POW 2",
+                "PHW",
+                "OP"
+            ]},
+            {id: 11, name: "Anaesthesia", subsystems: [
+                "SS H",
+                "Old Building",
+                "Full Duty"
+            ]}
+        ];
+
+        // --- RENDER SYSTEMS ---
+        function renderSystems() {
+            const grid = document.getElementById('system-grid');
+            grid.innerHTML = '';
+            systems.forEach(system => {
+                const box = document.createElement('div');
+                box.className = 'system-box';
+                box.textContent = `${system.id}. ${system.name}`;
+                box.onclick = () => {
+                    window.location.href = `system.html?system=${system.id}`;
+                };
+                grid.appendChild(box);
+            });
+        }
+
+        // --- SHOW DOCTOR CREDENTIALS & BUTTONS ---
+        function showDoctorCredentials() {
+            const loggedIn = localStorage.getItem('loggedIn');
+            const username = localStorage.getItem('username');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const user = users[username];
+            const credElem = document.getElementById('doctor-credentials');
+            const loginBtn = document.getElementById('login-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            if (loggedIn && user) {
+                credElem.innerHTML = `Dr. <b>${user.fullname}</b> | <span style="color:#fff;">${user.phone}</span>`;
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = '';
+            } else {
+                credElem.innerHTML = '';
+                loginBtn.style.display = '';
+                logoutBtn.style.display = 'none';
+            }
+        }
+
+        // --- LOGOUT FUNCTION ---
+        function logout() {
+            localStorage.removeItem('loggedIn');
+            localStorage.removeItem('username');
+            window.location.href = 'login.html';
+        }
+
+        // --- OPTIONAL: REDIRECT TO LOGIN IF NOT SIGNED IN ---
+        // Uncomment below if you want to restrict index.html to logged-in users only
+        // if (!localStorage.getItem('loggedIn') || !localStorage.getItem('username')) {
+        //     window.location.href = 'login.html';
+        // }
+
+        // --- INIT ---
+        renderSystems();
+        showDoctorCredentials();
+    </script>
+</body>
+</html>
