@@ -87,6 +87,15 @@ function logout() {
   });
 }
 
+// ----------- Helper Function for Assignment Arrays -----------
+function getUserObject(userProfile) {
+  return {
+    fullname: userProfile.fullname,
+    phone: userProfile.phone,
+    username: userProfile.username
+  };
+}
+
 // ----------- Assignment Functions -----------
 
 // Assign user to system/subsystem
