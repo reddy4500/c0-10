@@ -296,19 +296,20 @@
         <div id="assignment-info"></div>
         
         <!-- Assignment Form -->
-       <form class="form-container" id="assignment-form">
+     <div class="form-container" id="form-section">
   <h2>Choose Your System</h2>
   <select id="system-select">
     <option value="">Select System</option>
+    <!-- options populated by JS -->
   </select>
   <select id="subsystem-select">
     <option value="">Select Subsystem</option>
+    <!-- options populated by JS -->
   </select>
-  <button class="btn" type="submit">Submit</button>
+  <button class="btn" onclick="submitAssignment()">Submit</button>
   <div id="success-message"></div>
-</form>
-``
-
+</div>
+        
     </section>
 </body>
 </html>
