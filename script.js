@@ -87,15 +87,6 @@ function logout() {
   });
 }
 
-// ----------- Helper Function for Assignment Arrays -----------
-function getUserObject(userProfile) {
-  return {
-    fullname: userProfile.fullname,
-    phone: userProfile.phone,
-    username: userProfile.username
-  };
-}
-
 // ----------- Assignment Functions -----------
 
 // Assign user to system/subsystem
@@ -119,47 +110,46 @@ async function submitAssignment() {
       return;
     }
 
+    // Get user profile
     const userProfile = JSON.parse(sessionStorage.getItem('userProfile'));
-    if (!userProfile) {
-      msg.style.color = "#c0392b";
-      msg.innerText = "Session expired. Please log in again.";
-      return;
-    }
-
+    
+    // Remove from existing assignments (check all systems)
     const db = firebase.firestore();
     const assignmentsRef = db.collection("assignments");
     const existingAssignments = await assignmentsRef.get();
-
-    // Remove user from all previous assignments
+    
     for (const doc of existingAssignments.docs) {
       const data = doc.data();
       if (data.users && Array.isArray(data.users)) {
         const userIndex = data.users.findIndex(u => u.username === userProfile.username);
         if (userIndex >= 0) {
+          // Remove user from this assignment
           await assignmentsRef.doc(doc.id).update({
-            users: firebase.firestore.FieldValue.arrayRemove(getUserObject(userProfile))
+            users: firebase.firestore.FieldValue.arrayRemove(data.users[userIndex])
           });
         }
       }
     }
-
-    // Add user to the new assignment
+    
+    // Add to new assignment
     const assignmentDocId = `${systemId}_${subsystem}`;
     await assignmentsRef.doc(assignmentDocId).set({
-      users: firebase.firestore.FieldValue.arrayUnion(getUserObject(userProfile))
+      users: firebase.firestore.FieldValue.arrayUnion({
+        fullname: userProfile.fullname,
+        phone: userProfile.phone,
+        username: userProfile.username
+      })
     }, { merge: true });
-
+    
     msg.style.color = "#27ae60";
     msg.innerText = "Assignment successful!";
     setTimeout(() => {
       msg.innerText = "";
       showAssignmentInfo();
     }, 700);
-
   } catch (error) {
     msg.style.color = "#c0392b";
     msg.innerText = "Error assigning: " + error.message;
-    console.error("Assignment error:", error);
   }
 }
 
@@ -168,10 +158,15 @@ async function leaveAssignment(systemId, subsystem, username) {
   try {
     const userProfile = JSON.parse(sessionStorage.getItem('userProfile'));
     const db = firebase.firestore();
+    
     await db.collection("assignments").doc(`${systemId}_${subsystem}`).update({
-      users: firebase.firestore.FieldValue.arrayRemove(getUserObject(userProfile))
+      users: firebase.firestore.FieldValue.arrayRemove({
+        fullname: userProfile.fullname,
+        phone: userProfile.phone,
+        username: userProfile.username
+      })
     });
-
+    
     const msg = document.getElementById('success-message');
     msg.style.color = "#c0392b";
     msg.innerText = "You have left the subsystem.";
@@ -179,14 +174,64 @@ async function leaveAssignment(systemId, subsystem, username) {
       msg.innerText = "";
       showAssignmentInfo();
     }, 1000);
-
   } catch (error) {
     console.error("Error leaving assignment:", error);
   }
 }
 
+// Display the user's current assignment and show "Leave" button
+async function showAssignmentInfo() {
+  try {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
     
-  
+    const userProfile = JSON.parse(sessionStorage.getItem('userProfile'));
+    if (!userProfile) return;
+    
+    let assigned = false;
+    let assignedSystem = '', assignedSubsystem = '', assignedSystemId = '';
+    
+    // Check all assignments for this user
+    const db = firebase.firestore();
+    const assignmentsRef = db.collection("assignments");
+    const allAssignments = await assignmentsRef.get();
+    
+    for (const doc of allAssignments.docs) {
+      const data = doc.data();
+      if (data.users && data.users.some(u => u.username === userProfile.username)) {
+        const [sysId, sub] = doc.id.split('_');
+        assigned = true;
+        assignedSystemId = sysId;
+        assignedSystem = systems.find(s => s.id == sysId)?.name || sysId;
+        assignedSubsystem = sub;
+        break;
+      }
+    }
+    
+    const assignmentDiv = document.getElementById('assignment-info');
+    const formSection = document.getElementById('form-section');
+    
+    if (assigned) {
+      // Hide the assignment form if user is assigned
+      if (formSection) formSection.style.display = 'none';
+      assignmentDiv.innerHTML = `
+        <b>You are assigned to:</b><br>
+        System: <b>${assignedSystem}</b><br>
+        Subsystem: <b>${assignedSubsystem}</b><br>
+        <button id="leave-btn">Leave</button>
+      `;
+      document.getElementById('leave-btn').onclick = function() {
+        leaveAssignment(assignedSystemId, assignedSubsystem, userProfile.username);
+      };
+    } else {
+      // Show the form if not assigned
+      if (formSection) formSection.style.display = '';
+      assignmentDiv.innerHTML = '';
+    }
+  } catch (error) {
+    console.error("Error displaying assignment info:", error);
+  }
+}
 
 // ----------- Greeting on Form Page -----------
 function greetUser() {
